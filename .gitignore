@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv
+env.bak/
+venv.bak/
+ragImplementation/venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/media
+/staticfiles
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+ragImplementation/chroma_db/
+agent_backend/media/
+agent_backend/staticfiles/
+node_modules/
+
+# Large files (ML/torch libraries)
+*.pth
+*.onnx
+*.so
+*.dylib
+*.a
+ragImplementation/venv/lib/python3.9/site-packages/torch/
+ragImplementation/venv/lib/python3.9/site-packages/onnxruntime/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
