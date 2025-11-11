@@ -1,0 +1,108 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Campaign</title>
+    <link rel="stylesheet" href="/static/campaigns/css/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Lead Nurturing CRM</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{% url 'shortlist_leads' %}" class="nav-item {% if active_page == 'shortlist' %}active{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 2L2 6V14H6V10H10V14H14V6L8 2Z" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Create Campaign
+                </a>
+                <a href="{% url 'campaign_dashboard' %}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M2 6H14" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Campaign Analytics
+                </a>
+                <a href="{% url 'property_visits' %}" class="nav-item {% if active_page == 'visits' %}active{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <rect x="3" y="2" width="10" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="6" y1="5" x2="10" y2="5" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Property Visit/Call Scheduled
+                </a>
+                <!-- <a href="#" class="nav-item">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    AI Agent Follow-ups
+                </a>
+                <a href="#" class="nav-item">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="5" r="2" stroke="currentColor" stroke-width="1.5"/>
+                        <circle cx="8" cy="11" r="2" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="8" y1="7" x2="8" y2="9" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    AI Agent Settings
+                </a> -->
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <h1>Set Campaign Messaging</h1>
+            </header>
+
+            <div class="content-area">
+                <div class="campaign-header">
+                    <h2>Create Messaging</h2>
+                    <p class="subtitle">Shortlisted leads: <strong>{{ shortlisted_count }}</strong></p>
+                </div>
+
+                <form method="post" class="filter-form">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="project_name">Campaign Project</label>
+                        <select id="project_name" name="project_name" required>
+                            <option value="">Select project</option>
+                            {% for project in projects %}
+                            <option value="{{ project }}">{{ project }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="message_channel">Channel</label>
+                        <select id="message_channel" name="message_channel">
+                            <option value="Email">Email</option>
+                            <option value="WhatsApp" disabled>WhatsApp (coming soon)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sales_offer">Sales Offer Details (optional)</label>
+                        <textarea id="sales_offer" name="sales_offer" rows="4" placeholder="e.g., Limited-time 5% discount for Diwali..."></textarea>
+                    </div>
+
+                    {% if error_message %}
+                    <div style="color:#b91c1c; margin-bottom:10px;">{{ error_message }}</div>
+                    {% endif %}
+                    {% if success_message %}
+                    <div style="color:#065f46; margin-bottom:10px;">{{ success_message }}</div>
+                    {% endif %}
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Create Campaign</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
+
+

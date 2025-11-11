@@ -1,0 +1,220 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campaign Dashboard</title>
+    <link rel="stylesheet" href="/static/campaigns/css/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Lead Nurturing CRM</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{% url 'shortlist_leads' %}" class="nav-item {% if active_page == 'shortlist' %}active{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 2L2 6V14H6V10H10V14H14V6L8 2Z" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Create Campaign
+                </a>
+                <a href="{% url 'campaign_dashboard' %}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M2 6H14" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Campaign Analytics
+                </a>
+                <a href="{% url 'property_visits' %}" class="nav-item {% if active_page == 'visits' %}active{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <rect x="3" y="2" width="10" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="6" y1="5" x2="10" y2="5" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Property Visit/Call Scheduled
+                </a>
+                <!-- <a href="#" class="nav-item">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    AI Agent Follow-ups
+                </a>
+                <a href="#" class="nav-item">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="5" r="2" stroke="currentColor" stroke-width="1.5"/>
+                        <circle cx="8" cy="11" r="2" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="8" y1="7" x2="8" y2="9" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    AI Agent Settings
+                </a> -->
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <h1>Campaign Dashboard</h1>
+                <div>
+                    <button type="button" class="btn-primary" onclick="refreshReplies()" style="margin-top:8px;">
+                        Refresh Replies
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <div class="campaign-header">
+                    <form method="get" style="display:flex; gap:12px; align-items:center;">
+                        <label for="campaign_id">Select Campaign</label>
+                        <select id="campaign_id" name="campaign_id" onchange="this.form.submit()">
+                            {% for c in campaigns %}
+                            <option value="{{ c.id }}" {% if selected_campaign and c.id == selected_campaign.id %}selected{% endif %}>
+                                {{ c.project_name }} ({{ c.message_channel }}) — {{ c.created_at|date:"M d, Y H:i" }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </div>
+
+                {% if selected_campaign %}
+                <div class="metrics-grid" style="display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:12px; margin:16px 0;">
+                    <div class="metric-card">
+                        <div class="metric-label">Shortlisted</div>
+                        <div class="metric-value">{{ metrics.shortlisted }}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Messages Sent</div>
+                        <div class="metric-value">{{ metrics.messages_sent }}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Unique Replies</div>
+                        <div class="metric-value">{{ metrics.unique_replies }}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Goals Achieved</div>
+                        <div class="metric-value">{{ metrics.goals_achieved }}</div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header"><h3>Followups</h3></div>
+                    {% if followup_threads %}
+                    <table class="table" style="width:100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Lead</th>
+                                <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Email</th>
+                                <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Thread</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in followup_threads %}
+                            <tr>
+                                <td style="padding:8px; border-bottom:1px solid #f3f4f6;"><strong>{{ item.lead.lead_name }}</strong></td>
+                                <td style="padding:8px; border-bottom:1px solid #f3f4f6;">{{ item.lead.email }}</td>
+                                <td style="padding:8px; border-bottom:1px solid #f3f4f6;">
+                                    <button type="button" class="btn-link" onclick="openThreadModal('{{ item.lead.id }}', '{{ item.lead.lead_name|escapejs }}')">View Thread</button>
+                                    <div id="thread-data-{{ item.lead.id }}" style="display:none;">
+                                        {% for log in item.logs %}
+                                        {% if log.direction == "inbound" %}
+                                        <div class="thread-item thread-{{ log.direction }}">
+                                            <div class="thread-meta">{{ log.timestamp|date:"M d, Y H:i" }}</div>
+                                            {% if log.subject %}
+                                            <div class="thread-subject">{{ log.subject }}</div>
+                                            {% endif %}
+                                            <div class="thread-body">{{ log.body }}</div>
+                                        </div>
+                                        {% endif %}
+                                        {% empty %}
+                                        <div class="thread-empty">No messages yet.</div>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div style="color:#6b7280;">No followups yet.</div>
+                    {% endif %}
+                </div>
+
+                <div class="panel" style="margin-top:16px;">
+                    <div class="panel-header"><h3>Property visit/Call scheduled (Goal)</h3></div>
+                    {% if goals_list %}
+                    <table class="table" style="width:100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Lead</th>
+                                <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Status</th>
+                                <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Last Reply</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cl in goals_list %}
+                            <tr>
+                                <td style="padding:8px; border-bottom:1px solid #f3f4f6;"><strong>{{ cl.lead.lead_name }}</strong> — {{ cl.lead.email }}</td>
+                                <td style="padding:8px; border-bottom:1px solid #f3f4f6;">{{ cl.goal_status }}</td>
+                                <td style="padding:8px; border-bottom:1px solid #f3f4f6;">{{ cl.last_reply_at|date:"M d, Y H:i" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div style="color:#6b7280;">No goals achieved yet.</div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div style="color:#6b7280;">No campaigns yet.</div>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+
+    <script>
+    // Modal for thread view
+    function openThreadModal(id, leadName) {
+        const dataEl = document.getElementById('thread-data-' + id);
+        if (!dataEl) return;
+        const modal = document.getElementById('threadModal');
+        const body = document.getElementById('threadModalBody');
+        const title = document.getElementById('threadModalTitle');
+        if (title) {
+            title.textContent = leadName ? `Conversation with ${leadName}` : 'Conversation Thread';
+        }
+        body.innerHTML = dataEl.innerHTML;
+        modal.classList.add('open');
+    }
+    function closeThreadModal() {
+        const modal = document.getElementById('threadModal');
+        modal.classList.remove('open');
+    }
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeThreadModal();
+        }
+    });
+    async function refreshReplies() {
+        try {
+            await fetch('/api/fetch-replies');
+        } catch (e) {
+            console.error('Failed to fetch replies', e);
+        } finally {
+            location.reload();
+        }
+    }
+    </script>
+    <!-- Simple modal -->
+    <div id="threadModal" class="thread-modal-backdrop" onclick="closeThreadModal()">
+        <div class="thread-modal" onclick="event.stopPropagation()">
+            <div class="thread-modal-header">
+                <h3 id="threadModalTitle">Conversation Thread</h3>
+                <button type="button" class="thread-modal-close" onclick="closeThreadModal()">×</button>
+            </div>
+            <div id="threadModalBody" class="thread-modal-body"></div>
+        </div>
+    </div>
+</body>
+</html>
+
+

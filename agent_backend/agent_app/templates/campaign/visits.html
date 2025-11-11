@@ -1,0 +1,179 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Visit/Call Scheduled</title>
+    <link rel="stylesheet" href="/static/campaigns/css/styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <style>
+        .muted { color:#6b7280; font-size:12px; }
+    </style>
+    </head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Lead Nurturing CRM</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{% url 'shortlist_leads' %}" class="nav-item {% if active_page == 'shortlist' %}active{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 2L2 6V14H6V10H10V14H14V6L8 2Z" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Create Campaign
+                </a>
+                <a href="{% url 'campaign_dashboard' %}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M2 6H14" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Campaign Analytics
+                </a>
+                <a href="{% url 'property_visits' %}" class="nav-item {% if active_page == 'visits' %}active{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <rect x="3" y="2" width="10" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="6" y1="5" x2="10" y2="5" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Property Visit/Call Scheduled
+                </a>
+                <!-- <a href="#" class="nav-item">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    AI Agent Follow-ups
+                </a>
+                <a href="#" class="nav-item">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="5" r="2" stroke="currentColor" stroke-width="1.5"/>
+                        <circle cx="8" cy="11" r="2" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="8" y1="7" x2="8" y2="9" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    AI Agent Settings
+                </a> -->
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
+                    <h1>Property Visit/Call Scheduled</h1>
+                    <button type="button" class="btn-primary" style="max-width:200px;" onclick="triggerVisitRefresh()">Refresh Replies</button>
+                </div>
+            </header>
+
+            <div class="content-area">
+                {% if visits_data %}
+                <table class="table" style="width:100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Lead</th>
+                            <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Goal</th>
+                            <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Last Nurture Summary</th>
+                            <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Proposed Time</th>
+                            <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Campaign</th>
+                            <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Last Reply</th>
+                            <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Thread</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in visits_data %}
+                        <tr>
+                            <td style="padding:8px; border-bottom:1px solid #f3f4f6;">
+                                <strong>{{ item.cl.lead.lead_name }}</strong><br>
+                                <span class="muted">{{ item.cl.lead.email }}</span>
+                            </td>
+                            <td style="padding:8px; border-bottom:1px solid #f3f4f6;">{{ item.cl.goal_status|default:"-" }}</td>
+                            <td style="padding:8px; border-bottom:1px solid #f3f4f6;">{{ item.last_summary|default:"-" }}</td>
+                            <td style="padding:8px; border-bottom:1px solid #f3f4f6;">
+                                {% if item.cl.proposed_datetime %}{{ item.cl.proposed_datetime|date:"M d, Y H:i" }}{% else %}{{ item.cl.proposed_time_text|default:"-" }}{% endif %}
+                            </td>
+                            <td style="padding:8px; border-bottom:1px solid #f3f4f6;">{{ item.cl.campaign.project_name }}</td>
+                            <td style="padding:8px; border-bottom:1px solid #f3f4f6;">{{ item.cl.last_reply_at|date:"M d, Y H:i" }}</td>
+                            <td style="padding:8px; border-bottom:1px solid #f3f4f6;">
+                                <button type="button" class="btn-link" onclick="openVisitThreadModal('{{ item.cl.lead.id }}-{{ item.cl.campaign.id }}', '{{ item.cl.lead.lead_name|escapejs }}')">View Thread</button>
+                                <div id="visit-thread-data-{{ item.cl.lead.id }}-{{ item.cl.campaign.id }}" style="display:none;">
+                                    {% for log in item.logs %}
+                                    <div class="thread-item thread-{{ log.direction }}">
+                                        <div class="thread-meta">{{ log.timestamp|date:"M d, Y H:i" }}</div>
+                                        {% if log.subject %}
+                                        <div class="thread-subject">{{ log.subject }}</div>
+                                        {% endif %}
+                                        <div class="thread-body">{{ log.body }}</div>
+                                    </div>
+                                    {% empty %}
+                                    <div class="thread-empty">No messages yet.</div>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div style="color:#6b7280;">No visit/call requests yet.</div>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+    <div id="visitThreadModal" class="thread-modal-backdrop" onclick="closeVisitThreadModal()">
+        <div class="thread-modal" onclick="event.stopPropagation()">
+            <div class="thread-modal-header">
+                <h3 id="visitThreadModalTitle">Conversation Thread</h3>
+                <button type="button" class="thread-modal-close" onclick="closeVisitThreadModal()">×</button>
+            </div>
+            <div id="visitThreadModalBody" class="thread-modal-body"></div>
+        </div>
+    </div>
+    <script>
+    async function triggerVisitRefresh() {
+        try {
+            await fetch('/api/fetch-replies');
+        } catch (err) {
+            console.error('Failed to refresh replies', err);
+        } finally {
+            window.location.reload();
+        }
+    }
+    function openVisitThreadModal(key, leadName) {
+        const dataEl = document.getElementById('visit-thread-data-' + key);
+        if (!dataEl) {
+            console.error('Thread data element not found for key:', key);
+            return;
+        }
+        const modal = document.getElementById('visitThreadModal');
+        if (!modal) {
+            console.error('Modal element not found');
+            return;
+        }
+        const body = document.getElementById('visitThreadModalBody');
+        const title = document.getElementById('visitThreadModalTitle');
+        if (title) {
+            title.textContent = leadName ? `Conversation with ${leadName}` : 'Conversation Thread';
+        }
+        if (body) {
+            body.innerHTML = dataEl.innerHTML;
+        }
+        modal.classList.add('open');
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    }
+    function closeVisitThreadModal() {
+        const modal = document.getElementById('visitThreadModal');
+        if (modal) {
+            modal.classList.remove('open');
+        }
+        document.body.style.overflow = ''; // Restore scrolling
+    }
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeVisitThreadModal();
+        }
+    });
+    </script>
+</body>
+</html>
+
+

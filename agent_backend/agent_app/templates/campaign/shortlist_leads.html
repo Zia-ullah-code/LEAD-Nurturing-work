@@ -1,0 +1,196 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Nurturing CRM - Create Campaign</title>
+    <link rel="stylesheet" href="/static/campaigns/css/styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Lead Nurturing CRM</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{% url 'shortlist_leads' %}" class="nav-item {% if active_page == 'shortlist' %}active{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 2L2 6V14H6V10H10V14H14V6L8 2Z" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Create Campaign
+                </a>
+                <a href="{% url 'campaign_dashboard' %}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M2 6H14" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Campaign Analytics
+                </a>
+                <a href="{% url 'property_visits' %}" class="nav-item {% if active_page == 'visits' %}active{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <rect x="3" y="2" width="10" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="6" y1="5" x2="10" y2="5" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Property Visit/Call Scheduled
+                </a>
+                <!-- <a href="#" class="nav-item">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    AI Agent Follow-ups
+                </a>
+                <a href="#" class="nav-item">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="5" r="2" stroke="currentColor" stroke-width="1.5"/>
+                        <circle cx="8" cy="11" r="2" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="8" y1="7" x2="8" y2="9" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    AI Agent Settings
+                </a> -->
+            </nav>
+        </aside>
+        
+        <main class="main-content">
+            <header class="page-header">
+                <h1>Lead Nurturing CRM</h1>
+            </header>
+            
+            <div class="content-area">
+                <div class="campaign-header">
+                    <h2>Create New Campaign</h2>
+                    <p class="subtitle">Filter leads from your CRM to target for nurturing</p>
+                </div>
+                
+                <div class="filter-panel">
+                    <div class="panel-header">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M2 4H18M4 8H16M6 12H14" stroke="#666" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <h3>Shortlist Leads for Campaign</h3>
+                    </div>
+                    
+                    <form id="filterForm" class="filter-form" method="post" action="{% url 'shortlist_leads' %}">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="project_name">Project Name Enquired</label>
+                            <select id="project_name" name="project_name">
+                                <option value="">Select project</option>
+                                {% for project in projects %}
+                                <option value="{{ project }}" {% if filters.project_name == project %}selected{% endif %}>{{ project }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Budget Range</label>
+                            <div class="budget-inputs">
+                                <input type="number" id="min_budget" name="min_budget" placeholder="Min budget" value="{{ filters.min_budget|default_if_none:'' }}">
+                                <input type="number" id="max_budget" name="max_budget" placeholder="Max budget" value="{{ filters.max_budget|default_if_none:'' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Unit Type</label>
+                            <div class="checkbox-grid">
+                                {% for ut in unit_types %}
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="unit_type" value="{{ ut }}" {% if filters.unit_type and ut in filters.unit_type %}checked{% endif %}>
+                                    <span>{{ ut }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Lead Status</label>
+                            <div class="checkbox-grid">
+                                {% for status in lead_statuses %}
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="lead_status" value="{{ status }}" {% if filters.lead_status and status in filters.lead_status %}checked{% endif %}>
+                                    <span>{{ status }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Date Range</label>
+                            <div class="date-inputs">
+                                <input type="text" id="from_date" name="from_date" placeholder="From date" readonly value="{{ filters.from_date|default_if_none:'' }}">
+                                <input type="text" id="to_date" name="to_date" placeholder="To date" readonly value="{{ filters.to_date|default_if_none:'' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="filter-summary">
+                            <div class="filters-count">
+                                <span id="filterCount">0</span> filters selected
+                            </div>
+                            <div class="ready-indicator" id="readyIndicator" style="display: none;">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                    <path d="M4 8L7 11L12 5" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Ready to search leads
+                            </div>
+                            {% if error_message %}
+                            <div id="serverError" style="color:#b91c1c; margin-top:8px;">{{ error_message }}</div>
+                            {% endif %}
+                            <div id="formError" style="color:#b91c1c; margin-top:8px; display:none;"></div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary" id="shortlistBtn">Shortlist Leads</button>
+                            <button type="button" class="btn-secondary" id="clearAllBtn">Clear All</button>
+                        </div>
+                    </form>
+                    
+                    <div class="results-area" id="resultsArea">
+                        <div class="results-message" id="resultsMessage">
+                            <strong><span id="leadCount">{{ leads|length }}</span> leads match your criteria</strong>
+                        </div>
+                        {% if leads and leads|length > 0 %}
+                        <div id="leadsList" style="overflow-x:auto;">
+                            <table class="table" style="width:100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Name</th>
+                                        <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Project</th>
+                                        <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Unit Type</th>
+                                        <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Status</th>
+                                        <th style="text-align:right; padding:8px; border-bottom:1px solid #e5e7eb;">Min Budget</th>
+                                        <th style="text-align:right; padding:8px; border-bottom:1px solid #e5e7eb;">Max Budget</th>
+                                        <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Last Conversation</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for lead in leads %}
+                                    <tr>
+                                        <td style="padding:8px; border-bottom:1px solid #f3f4f6;"><strong>{{ lead.lead_name }}</strong></td>
+                                        <td style="padding:8px; border-bottom:1px solid #f3f4f6;">{{ lead.project_name }}</td>
+                                        <td style="padding:8px; border-bottom:1px solid #f3f4f6;">{{ lead.unit_type|default:"-" }}</td>
+                                        <td style="padding:8px; border-bottom:1px solid #f3f4f6;">{{ lead.lead_status|default:"-" }}</td>
+                                        <td style="padding:8px; border-bottom:1px solid #f3f4f6; text-align:right;">{{ lead.min_budget|default:"-" }}</td>
+                                        <td style="padding:8px; border-bottom:1px solid #f3f4f6; text-align:right;">{{ lead.max_budget|default:"-" }}</td>
+                                        <td style="padding:8px; border-bottom:1px solid #f3f4f6;">{{ lead.last_conversation_date|default:"-" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="form-actions" style="margin-top: 12px;">
+                            <a href="{% url 'create_campaign' %}" class="btn-primary" style="display:inline-block; padding:10px 14px; text-decoration:none;">Next: Set Campaign Messaging</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="/static/campaigns/js/app.js"></script>
+</body>
+</html>

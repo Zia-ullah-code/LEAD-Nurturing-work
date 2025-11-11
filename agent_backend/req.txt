@@ -1,0 +1,8 @@
+Django==5.1
+django-ninja==0.21
+chromadb==0.3.24
+langgraph==0.6.11
+openai==1.32.0
+pytest==8.3.2
+djangorestframework-simplejwt==6.2.0
+pydantic==2.12.4
