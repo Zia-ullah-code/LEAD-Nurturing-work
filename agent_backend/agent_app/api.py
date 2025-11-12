@@ -1,7 +1,6 @@
 # agent_app/api.py
-from ninja import NinjaAPI
+from ninja import NinjaAPI, Schema, File, UploadedFile
 import sys, os
-from ninja import NinjaAPI, Schema
 from typing import Optional, List
 from agent_app.models import Campaign, Lead
 from django.utils import timezone
@@ -238,3 +237,100 @@ def get_replies(request):
     updated = fetch_lead_replies()
     print(f"[COMPLETE] Fetched replies: {updated} leads updated")
     return {"message": "Fetched new replies successfully"}
+
+
+# -------------------------------
+# 5️⃣ Document Upload/Ingestion Endpoint
+# -------------------------------
+
+# Add ragImplementation to path (already added above, but ensuring it's here)
+from rag_main import load_documents, split_into_chunks, generate_embeddings, store_in_chromadb
+
+@api.post("/documents/upload")
+def upload_document(request, file: UploadedFile = File(...)):
+    """
+    Upload and ingest a document (PDF brochure).
+    Accepts PDF file, processes it through the ingestion pipeline:
+    1. File Upload
+    2. Chunking/Splitting
+    3. Embedding
+    4. Storage in ChromaDB
+    """
+    try:
+        # Validate file type
+        if not file.name.lower().endswith('.pdf'):
+            return {"status": "error", "message": "Only PDF files are supported"}, 400
+        
+        # Save uploaded file temporarily
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        temp_dir = os.path.join(BASE_DIR, "../../ragImplementation/temp_uploads")
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        file_path = os.path.join(temp_dir, file.name)
+        
+        # Read file content and save
+        file_content = file.read()
+        with open(file_path, 'wb') as destination:
+            destination.write(file_content)
+        
+        # Step 1: Load document
+        documents = load_documents(temp_dir)
+        if not documents:
+            # Clean up
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+            return {"status": "error", "message": "Failed to load document"}, 400
+        
+        # Step 2: Split into chunks
+        chunks = split_into_chunks(documents)
+        if not chunks:
+            # Clean up
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+            return {"status": "error", "message": "Failed to chunk document"}, 400
+        
+        # Step 3: Generate embeddings
+        try:
+            embedded_chunks = generate_embeddings(chunks)
+        except Exception as e:
+            # Clean up
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+            return {"status": "error", "message": f"Failed to generate embeddings: {str(e)}"}, 500
+        
+        # Step 4: Store in ChromaDB
+        try:
+            # Get ChromaDB path
+            CHROMA_DB_PATH = os.path.abspath(os.path.join(BASE_DIR, "../../ragImplementation/chroma_db"))
+            
+            vectorstore = store_in_chromadb(embedded_chunks, persist_directory=CHROMA_DB_PATH)
+            
+            # Clean up temporary file
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+            
+            return {
+                "status": "success",
+                "message": "Document uploaded and ingested successfully",
+                "chunks_created": len(embedded_chunks),
+                "file_name": file.name
+            }
+        except Exception as e:
+            # Clean up
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+            return {"status": "error", "message": f"Failed to store in ChromaDB: {str(e)}"}, 500
+        
+    except Exception as e:
+        return {"status": "error", "message": f"Upload failed: {str(e)}"}, 500
+

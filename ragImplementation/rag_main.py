@@ -3,12 +3,10 @@ import re
 import pdfplumber
 from PyPDF2 import PdfReader
 
-import os
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CHROMA_DB_PATH = os.path.join(BASE_DIR, "chroma_db")
-
-
+# Use environment variable if set (for Render), otherwise use local path
+CHROMA_DB_PATH = os.environ.get('CHROMA_DB_PATH', os.path.join(BASE_DIR, "chroma_db"))
+RAG_PDFS_PATH = os.environ.get('RAG_PDFS_PATH', os.path.join(BASE_DIR, "pdfs"))
 
 
 def load_documents(folder_path):
@@ -28,6 +26,10 @@ def load_documents(folder_path):
     documents = []
 
     # Loop through all files in the folder
+    if not os.path.exists(folder_path):
+        print(f"Warning: Folder not found: {folder_path}")
+        return documents
+
     for file_name in os.listdir(folder_path):
         if file_name.lower().endswith('.pdf'):
             file_path = os.path.join(folder_path, file_name)
@@ -139,10 +141,8 @@ def generate_embeddings(chunks):
 
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
-import os
 
-def store_in_chromadb(chunks, persist_directory=CHROMA_DB_PATH
-):
+def store_in_chromadb(chunks, persist_directory=CHROMA_DB_PATH):
     print("----------------------------------step4: storing in chromadb----------------------------------")
 
     """
@@ -163,6 +163,9 @@ def store_in_chromadb(chunks, persist_directory=CHROMA_DB_PATH
     embedding_model = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
+
+    # Ensure directory exists
+    os.makedirs(persist_directory, exist_ok=True)
 
     # Prepare data for Chroma
     ids = [f"{chunk['file_name']}_chunk{chunk['chunk_id']}" for chunk in chunks]
@@ -189,23 +192,24 @@ from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
 def query_brochures(query_text, top_k=3):
-    # Querying chromadb
-
-
     """
     Search the ChromaDB 'brochure_vectors' collection for the top-k
     most relevant chunks to the given query text using cosine similarity.
     """
     # Load the same embedding model used for indexing
     embedding_model = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
 
+    # Use environment variable if set, otherwise use default
+    chroma_db_path = os.environ.get('CHROMA_DB_PATH', CHROMA_DB_PATH)
+    
+    # Ensure directory exists
+    os.makedirs(chroma_db_path, exist_ok=True)
 
     # Reconnect to your ChromaDB collection
     db = Chroma(
-        persist_directory=CHROMA_DB_PATH,
-
+        persist_directory=chroma_db_path,
         collection_name="brochure_vectors",
         embedding_function=embedding_model
     )
@@ -225,12 +229,28 @@ def query_brochures(query_text, top_k=3):
 
 
 def build_chroma_db():
-
-    folder = "pdfs"
+    # Use environment variable if set, otherwise use default
+    folder = RAG_PDFS_PATH if os.environ.get('RAG_PDFS_PATH') else os.path.join(BASE_DIR, "pdfs")
+    
+    # Ensure folder exists
+    if not os.path.exists(folder):
+        print(f"Warning: PDF folder not found: {folder}")
+        print("Creating folder...")
+        os.makedirs(folder, exist_ok=True)
+        print("Please add PDF files to the folder and run again.")
+        return
+    
     docs = load_documents(folder)
+    if not docs:
+        print(f"No PDF documents found in {folder}")
+        return
+    
+    # Use environment variable for ChromaDB path
+    chroma_db_path = os.environ.get('CHROMA_DB_PATH', CHROMA_DB_PATH)
+    
     chunks = split_into_chunks(docs)
     embedded_chunks = generate_embeddings(chunks)
-    store_in_chromadb(embedded_chunks)
+    store_in_chromadb(embedded_chunks, persist_directory=chroma_db_path)
 
     print("✅ Chunks successfully stored in ChromaDB!")
 

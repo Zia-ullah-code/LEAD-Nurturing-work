@@ -1,0 +1,59 @@
+services:
+  # Django Web Service
+  - type: web
+    name: lead-nurturing-agent
+    env: python
+    plan: starter  # Can upgrade to standard or pro for more resources
+    region: oregon  # Choose your preferred region
+    rootDir: agent_backend
+    buildCommand: chmod +x build.sh && ./build.sh
+    startCommand: gunicorn agent_backend.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: RENDER
+        value: "true"
+      - key: ALLOWED_HOSTS
+        sync: false  # Will be set automatically or manually
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lead-nurturing-db
+          property: internalConnectionString
+      - key: EMAIL_HOST
+        sync: false  # Set manually in Render dashboard
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "True"
+      - key: EMAIL_HOST_USER
+        sync: false  # Set manually in Render dashboard
+      - key: EMAIL_HOST_PASSWORD
+        sync: false  # Set manually in Render dashboard (use app password)
+      - key: DEFAULT_FROM_EMAIL
+        sync: false  # Set manually in Render dashboard
+      - key: GEMINI_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: CHROMA_DB_PATH
+        value: /opt/render/project/src/ragImplementation/chroma_db
+      - key: RAG_PDFS_PATH
+        value: /opt/render/project/src/ragImplementation/pdfs
+    disk:
+      name: chromadb-disk
+      mountPath: /opt/render/project/src/ragImplementation
+      sizeGB: 1
+
+  # PostgreSQL Database
+  - type: pspg
+    name: lead-nurturing-db
+    plan: starter  # Free tier available, upgrade as needed
+    databaseName: lead_nurturing_db
+    user: lead_nurturing_user
+
+# Note: ChromaDB will be stored on the persistent disk
+# Render provides persistent disk storage for web services
+# Make sure to configure disk in Render dashboard if needed
+
